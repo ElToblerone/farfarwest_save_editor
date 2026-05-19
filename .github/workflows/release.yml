@@ -1,0 +1,56 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+name: release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v8
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.12"
+
+    - name: Install dependencies
+      run: uv sync --frozen
+
+    - name: Read project version
+      id: version
+      shell: pwsh
+      run: |
+        $version = python -c "import tomllib; from pathlib import Path; print(tomllib.loads(Path('pyproject.toml').read_text(encoding='utf-8'))['project']['version'])"
+        "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+    - name: Build executable
+      shell: pwsh
+      run: uv run pyinstaller FarFarWestSaveEditor.spec
+
+    - name: Rename release asset
+      shell: pwsh
+      run: |
+        $version = "${{ steps.version.outputs.version }}"
+        Copy-Item "dist\FarFarWestSaveEditor.exe" "dist\FarFarWestSaveEditor_v$version.exe"
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v3
+      with:
+        tag_name: ${{ github.ref_name }}
+        name: FarFarWestSaveEditor v${{ steps.version.outputs.version }}
+        files: dist/FarFarWestSaveEditor_v${{ steps.version.outputs.version }}.exe
+
