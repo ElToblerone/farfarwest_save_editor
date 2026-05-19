@@ -5,8 +5,7 @@ name: release
 
 on:
   push:
-    tags:
-      - "v*.*.*"
+    branches: [ "master" ]
 
 permissions:
   contents: write
@@ -37,20 +36,52 @@ jobs:
         $version = python -c "import tomllib; from pathlib import Path; print(tomllib.loads(Path('pyproject.toml').read_text(encoding='utf-8'))['project']['version'])"
         "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
+    - name: Check existing release
+      id: release_check
+      uses: actions/github-script@v9
+      with:
+        script: |
+          const version = `${{ steps.version.outputs.version }}`;
+          const tag = `v${version}`;
+          try {
+            await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag,
+            });
+            core.setOutput('exists', 'true');
+            core.info(`Release already exists for ${tag}; skipping build.`);
+          } catch (error) {
+            if (error.status === 404) {
+              core.setOutput('exists', 'false');
+              core.info(`No release found for ${tag}; continuing.`);
+            } else {
+              throw error;
+            }
+          }
+
+    - name: Stop if release already exists
+      if: steps.release_check.outputs.exists == 'true'
+      shell: pwsh
+      run: exit 0
+
     - name: Build executable
+      if: steps.release_check.outputs.exists != 'true'
       shell: pwsh
       run: uv run pyinstaller FarFarWestSaveEditor.spec
 
     - name: Rename release asset
+      if: steps.release_check.outputs.exists != 'true'
       shell: pwsh
       run: |
         $version = "${{ steps.version.outputs.version }}"
         Copy-Item "dist\FarFarWestSaveEditor.exe" "dist\FarFarWestSaveEditor_v$version.exe"
 
     - name: Create GitHub Release
+      if: steps.release_check.outputs.exists != 'true'
       uses: softprops/action-gh-release@v3
       with:
-        tag_name: ${{ github.ref_name }}
+        tag_name: v${{ steps.version.outputs.version }}
         name: FarFarWestSaveEditor v${{ steps.version.outputs.version }}
         files: dist/FarFarWestSaveEditor_v${{ steps.version.outputs.version }}.exe
 
