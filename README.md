@@ -43,7 +43,7 @@ The editor derives the AES key from the save filename. The filename must begin w
 
 ## Transferring your save to another steam account
 ### Prerequisites
-- Find your save file at `C:\Users\[your user folder]\AppData\Local\FarFarWest\Saved\SaveGames\[your steam64 ID].save`
+- Find your save file at `C:\Users\[Username]\AppData\Local\FarFarWest\Saved\SaveGames\[your steam64 ID].save`
 - Obtain the `Steam64 ID` of both accounts (for example by using SteamID finder)
 - Start the game on the other account and create a backup (Options -> Backups -> create Backup)
 - This should create a timestamped `backup.sav` file

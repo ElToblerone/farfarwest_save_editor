@@ -126,7 +126,8 @@ class SaveEditor(tk.Tk):
         self.minsize(960, 600)
         self.configure(bg=BG)
 
-        self.key: bytes | None = None
+        self.key: bytes | None = None              # key of the imported file
+        self.key_to_transfer: bytes | None = None  # key of the "to transfer file"
         self.save_path: Path | None = None
         self.gvas: GvasFile | None = None
         self.tables: dict[str, dict[str, Any]] = {}
@@ -260,6 +261,7 @@ class SaveEditor(tk.Tk):
         self.header_label.pack(side=LEFT)
         ttk.Label(header, textvariable=self.file_label_var, style="File.TLabel").pack(side=LEFT, padx=(18, 0))
 
+        ttk.Button(header, text=I18N.t("transfer"), command=self.transfer, style="Ghost.TButton").pack(side=RIGHT)
         ttk.Button(header, text=I18N.t("save_as"), command=self.save_as, style="Ghost.TButton").pack(side=RIGHT)
         ttk.Button(header, text=I18N.t("save"),    command=self.save_current, style="Accent.TButton").pack(side=RIGHT, padx=(0, 8))
         ttk.Button(header, text=I18N.t("open"),    command=self.open_save, style="Ghost.TButton").pack(side=RIGHT, padx=(0, 8))
@@ -566,6 +568,16 @@ class SaveEditor(tk.Tk):
         except Exception as exc:
             messagebox.showerror(I18N.t("save_failed"), str(exc))
             self.status_var.set(f"{I18N.t('save_failed')}: {exc}")
+
+    def transfer(self):
+        # require a file to be opened -> check if key is set?
+        # show error "Open a file before transferring"
+
+        # input 2nd file name
+        second_file = int(input("Insert new .save file: "))
+        # derive 2nd key -> store it
+        self.key_to_transfer = b''
+        return
 
     # ---- table data plumbing -------------------------------------------
     def rebuild_rows(self, keep_selection: tuple[str, str] | None = None):
