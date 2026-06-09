@@ -46,17 +46,20 @@ The editor derives the AES key from the save filename. The filename must begin w
 - Find your save file at `C:\Users\[Username]\AppData\Local\FarFarWest\Saved\SaveGames\[your steam64 ID].save`
 - Obtain the `Steam64 ID` of both accounts (for example by using SteamID finder)
 - Start the game on the other account and create a backup (Options -> Backups -> create Backup)
-- This should create a timestamped `backup.sav` file
+- This should create a timestamped `backup_[Date]_[Time].sav` file
 
 ### How to transfer
-- Close the game
-- Open the save you want to transfer
-- Click on the *Transfer To Account* dialogue
-- Enter the `Steam64 ID` of the account you want to transfer to
-- Save it as the previously created `backup.sav` file and overwrite it
-- Start the game and load it from the in-game "recover from backup" dialogue
+- Close the game and start the **Save Editor**
+- Open the save you want to transfer (for example Steam64 ID `76561197960287930.save`); referred to as **File A**
+- Click on the **Transfer** dialogue
+- Choose **File B** (for example Steam64 ID `76561197982529863.save`) **THIS WILL NOT ALTER THE FILE AND IS ONLY NECESSARY TO DERIVE YOUR SECOND `Steam64 ID`!**
+- You will be prompted to choose a `backup_[Date]_[Time].sav` file. This will save the contents from **File A** into `backup_[Date]_[Time].sav`, using **File B**'s AES Key
+- Start the game and load `backup_[Date]_[Time].sav` from the in-game "recover from backup" dialogue
+- A backup will be created and named `[filename].backup_gui_[timestamp].sav`, should you need to recover from the old `backup_[Date]_[Time].sav` file.
+
 
 ### My save does not open/is corrupted
-- Disable steam cloud save before trying to import?
+- Your old file should still be present as a backup: `[filename].backup_gui_[timestamp].sav`
 - You entered a wrong Steam ID while saving to file-> the game tries to derive a cipherkey from the `Steam64 ID.save` file name.
-- The process of backup loading has been altered
+- Disable steam cloud save before trying to import?
+- The process of backup loading has been altered and this method has been patched
