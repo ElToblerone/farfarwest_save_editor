@@ -261,7 +261,7 @@ class SaveEditor(tk.Tk):
         self.header_label.pack(side=LEFT)
         ttk.Label(header, textvariable=self.file_label_var, style="File.TLabel").pack(side=LEFT, padx=(18, 0))
 
-        ttk.Button(header, text=I18N.t("transfer"), command=self.transfer, style="Ghost.TButton").pack(side=RIGHT)
+        ttk.Button(header, text=I18N.t("transfer"), command=self.transfer_save, style="Ghost.TButton").pack(side=RIGHT)
         ttk.Button(header, text=I18N.t("save_as"), command=self.save_as, style="Ghost.TButton").pack(side=RIGHT)
         ttk.Button(header, text=I18N.t("save"),    command=self.save_current, style="Accent.TButton").pack(side=RIGHT, padx=(0, 8))
         ttk.Button(header, text=I18N.t("open"),    command=self.open_save, style="Ghost.TButton").pack(side=RIGHT, padx=(0, 8))
@@ -502,6 +502,7 @@ class SaveEditor(tk.Tk):
 
     # ---- file ops -------------------------------------------------------
     def open_save(self):
+        print(self.key)
         path = filedialog.askopenfilename(
             title=I18N.t("open"),
             initialdir=str(ROOT_DIR),
@@ -513,6 +514,8 @@ class SaveEditor(tk.Tk):
     def load_save(self, path: Path):
         try:
             self.key = _load_key(path)
+            print(self.key)
+
             plaintext = decrypt(path.read_bytes(), self.key)
             self.gvas = GvasFile.parse(plaintext)
             self.save_path = path
@@ -569,14 +572,77 @@ class SaveEditor(tk.Tk):
             messagebox.showerror(I18N.t("save_failed"), str(exc))
             self.status_var.set(f"{I18N.t('save_failed')}: {exc}")
 
-    def transfer(self):
-        # require a file to be opened -> check if key is set?
-        # show error "Open a file before transferring"
+    def _save_to_other_key(self, path: Path, make_backup: bool, other_key: bytes):
+        if self.gvas is None:
+            messagebox.showinfo(I18N.t("msg_nothing_to_save"), I18N.t("msg_no_save"))
+            return
+        if other_key is None:
+            messagebox.showerror(I18N.t("save_failed"), I18N.t("msg_no_key"))
+            return
+        try:
+            plaintext = self.gvas.serialize()
+            encrypted = encrypt(plaintext, other_key)
+            if make_backup and path.exists():
+                stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                backup = path.with_name(f"{path.stem}.backup_gui_{stamp}{path.suffix}")
+                shutil.copy2(path, backup)
+            tmp = path.with_suffix(path.suffix + ".tmp")
+            tmp.write_bytes(encrypted)
+            tmp.replace(path)
+            self.save_path = path
+            self.file_label_var.set(path.name)
+            self.status_var.set(I18N.t("msg_saved", name=path.name))
+        except Exception as exc:
+            messagebox.showerror(I18N.t("save_failed"), str(exc))
+            self.status_var.set(f"{I18N.t('save_failed')}: {exc}")
 
-        # input 2nd file name
-        second_file = int(input("Insert new .save file: "))
-        # derive 2nd key -> store it
-        self.key_to_transfer = b''
+    def transfer_save(self):
+        try:
+            if self.key is None:
+                messagebox.showerror(I18N.t("transfer_failed"), I18N.t("msg_no_key"))
+                return
+
+            # input 1st file name -> derive key from Steam64 ID
+            path = filedialog.askopenfilename(
+                title=I18N.t("transfer_from_ID"),
+                initialdir=str(ROOT_DIR),
+                filetypes=[(I18N.t("save"), "*.save"), (I18N.t("other"), "*.*")],
+            )
+            if path:
+                self.key_to_transfer = _load_key(Path(path))
+                print(f"key from opened save: {self.key}")
+                print(f"key from 2nd save: {self.key_to_transfer}")
+
+            if self.key_to_transfer is None:
+                messagebox.showerror(I18N.t("transfer_failed"), I18N.t("msg_no_key"))
+                return
+
+            # input 2nd file name
+            path_to_transfer = filedialog.askopenfilename(
+                title=I18N.t("transfer_to_file"),
+                initialdir=str(ROOT_DIR),
+                filetypes=[(I18N.t("backup"), "*.sav"), (I18N.t("other"), "*.*")],
+            )
+
+            # check if file name matches the backup format of FFW "backup_2026_6_7_20_18_18.sav"
+            print(Path(path_to_transfer).stem)
+            print(Path(path_to_transfer).suffix)
+            match = re.match(r"^(backup+)", Path(path_to_transfer).stem)
+            print(match)
+            if match is None:
+                raise RuntimeError(f"Save filename must start with 'backup'; Please choose a valid Backup File from Far Far West: {Path(path_to_transfer).name}")
+            if Path(path_to_transfer).suffix != ".sav":
+                raise RuntimeError(f"Backup filename must end with '.sav': {Path(path_to_transfer).name}")
+
+            # write into FFW_backup file, creating a save_editor_backup file before
+            if path_to_transfer:
+                self._save_to_other_key(Path(path_to_transfer), make_backup=Path(path_to_transfer).exists(), other_key=self.key_to_transfer)
+
+
+        except Exception as exc:
+            messagebox.showerror(I18N.t("transfer_failed"), str(exc))
+            self.status_var.set(f"{I18N.t('transfer_failed')}: {exc}")
+
         return
 
     # ---- table data plumbing -------------------------------------------
